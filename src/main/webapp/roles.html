@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Gestión de Roles</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body class="container py-4">
+        <h1 class="mb-4">Gestión de Roles</h1>
+
+        <form id="rolForm" class="mb-4">
+            <input type="hidden" id="id">
+            <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre del Rol</label>
+                <input type="text" class="form-control" id="nombre" required>
+            </div>
+            <button type="submit" class="btn btn-primary" id="guardarBtn">Guardar</button>
+            <button type="button" class="btn btn-secondary" id="cancelarBtn" style="display:none;">Cancelar</button>
+        </form>
+
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="rolesTableBody"></tbody>
+        </table>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                cargarRoles();
+
+                document.getElementById("rolForm").addEventListener("submit", (e) => {
+                    e.preventDefault();
+                    const id = document.getElementById("id").value;
+                    if (id) {
+                        actualizarRol(id);
+                    } else {
+                        crearRol();
+                    }
+                });
+
+                document.getElementById("cancelarBtn").addEventListener("click", () => {
+                    document.getElementById("rolForm").reset();
+                    document.getElementById("id").value = "";
+                    document.getElementById("cancelarBtn").style.display = "none";
+                    document.getElementById("guardarBtn").textContent = "Guardar";
+                });
+            });
+
+            function cargarRoles() {
+                fetch("roles")
+                        .then(res => res.json())
+                        .then(data => {
+                            const tbody = document.getElementById("rolesTableBody");
+                            tbody.innerHTML = "";
+                            data.forEach(rol => {
+                                const tr = document.createElement("tr");
+                                tr.innerHTML = `
+                <td>${rol.id}</td>
+                <td>${rol.nombre}</td>
+                <td>
+                  <button class="btn btn-sm btn-warning" onclick="editarRol(${rol.id}, '${rol.nombre}')">Editar</button>
+                  <button class="btn btn-sm btn-danger" onclick="eliminarRol(${rol.id})">Eliminar</button>
+                </td>
+              `;
+                                tbody.appendChild(tr);
+                            });
+                        });
+            }
+
+            function crearRol() {
+                const nombre = document.getElementById("nombre").value;
+
+                fetch("roles", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({nombre})
+                }).then(() => {
+                    document.getElementById("rolForm").reset();
+                    cargarRoles();
+                });
+            }
+
+            function actualizarRol(id) {
+                const nombre = document.getElementById("nombre").value;
+
+                fetch("roles", {
+                    method: "PUT",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({id: parseInt(id), nombre})
+                }).then(() => {
+                    document.getElementById("rolForm").reset();
+                    document.getElementById("id").value = "";
+                    document.getElementById("guardarBtn").textContent = "Guardar";
+                    document.getElementById("cancelarBtn").style.display = "none";
+                    cargarRoles();
+                });
+            }
+
+            function eliminarRol(id) {
+                if (confirm("¿Seguro que deseas eliminar este rol?")) {
+                    fetch(`roles?id=${id}`, {
+                        method: "DELETE"
+                    }).then(() => {
+                        cargarRoles();
+                    });
+                }
+            }
+
+            function editarRol(id, nombre) {
+                document.getElementById("id").value = id;
+                document.getElementById("nombre").value = nombre;
+                document.getElementById("guardarBtn").textContent = "Actualizar";
+                document.getElementById("cancelarBtn").style.display = "inline-block";
+            }
+        </script>
+    </body>
+</html>

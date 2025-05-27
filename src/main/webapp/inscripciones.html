@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gestión de Inscripciones</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container mt-4">
+    <h2 class="mb-4">Inscripciones</h2>
+
+    <form id="formInscripcion" class="mb-4">
+        <input type="hidden" id="id" />
+        <div class="mb-3">
+            <label for="fechaInscripcion" class="form-label">Fecha de Inscripción</label>
+            <input type="date" id="fechaInscripcion" class="form-control" required />
+        </div>
+        <div class="mb-3">
+            <label for="estudianteId" class="form-label">ID Estudiante</label>
+            <input type="number" id="estudianteId" class="form-control" required min="1" />
+        </div>
+        <div class="mb-3">
+            <label for="claseId" class="form-label">ID Clase</label>
+            <input type="number" id="claseId" class="form-control" required min="1" />
+        </div>
+        <button type="submit" class="btn btn-primary" id="btnSubmit">Agregar</button>
+        <button type="button" class="btn btn-secondary" id="btnCancelar" style="display:none;">Cancelar</button>
+    </form>
+
+    <table class="table table-striped" id="tablaInscripciones">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Fecha Inscripción</th>
+                <th>ID Estudiante</th>
+                <th>ID Clase</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Aquí se llenará con JS -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+const url = 'inscripciones'; // URL del servlet
+
+// Referencias DOM
+const form = document.getElementById('formInscripcion');
+const idInput = document.getElementById('id');
+const fechaInput = document.getElementById('fechaInscripcion');
+const estudianteInput = document.getElementById('estudianteId');
+const claseInput = document.getElementById('claseId');
+const btnSubmit = document.getElementById('btnSubmit');
+const btnCancelar = document.getElementById('btnCancelar');
+const tablaBody = document.querySelector('#tablaInscripciones tbody');
+
+document.addEventListener('DOMContentLoaded', () => {
+    cargarInscripciones();
+});
+
+form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const id = idInput.value.trim();
+    if (id === '') {
+        // Crear
+        postInscripcion();
+    } else {
+        // Editar
+        putInscripcion();
+    }
+});
+
+btnCancelar.addEventListener('click', () => {
+    limpiarFormulario();
+});
+
+function cargarInscripciones() {
+    fetch(url)
+        .then(response => {
+            if (!response.ok) throw new Error('Error al obtener inscripciones');
+            return response.json();
+        })
+        .then(data => {
+            tablaBody.innerHTML = '';
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+
+                tr.innerHTML = `
+                    <td>${item.id}</td>
+                    <td>${item.fechaInscripcion || ''}</td>
+                    <td>${item.estudianteId}</td>
+                    <td>${item.claseId}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning btn-edit" data-id="${item.id}">Editar</button>
+                        <button class="btn btn-sm btn-danger btn-delete" data-id="${item.id}">Eliminar</button>
+                    </td>
+                `;
+                tablaBody.appendChild(tr);
+            });
+            agregarEventos();
+        })
+        .catch(error => alert(error.message));
+}
+
+function agregarEventos() {
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.onclick = () => {
+            const id = btn.getAttribute('data-id');
+            cargarInscripcion(id);
+        };
+    });
+    document.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.onclick = () => {
+            const id = btn.getAttribute('data-id');
+            if (confirm('¿Seguro que deseas eliminar esta inscripción?')) {
+                deleteInscripcion(id);
+            }
+        };
+    });
+}
+
+function cargarInscripcion(id) {
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            const ins = data.find(i => i.id == id);
+            if (!ins) {
+                alert('Inscripción no encontrada');
+                return;
+            }
+            idInput.value = ins.id;
+            fechaInput.value = ins.fechaInscripcion;
+            estudianteInput.value = ins.estudianteId;
+            claseInput.value = ins.claseId;
+
+            btnSubmit.textContent = 'Actualizar';
+            btnCancelar.style.display = 'inline-block';
+        });
+}
+
+function limpiarFormulario() {
+    form.reset();
+    idInput.value = '';
+    btnSubmit.textContent = 'Agregar';
+    btnCancelar.style.display = 'none';
+}
+
+function postInscripcion() {
+    const data = {
+        fechaInscripcion: fechaInput.value,
+        estudianteId: Number(estudianteInput.value),
+        claseId: Number(claseInput.value)
+    };
+
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (resp.error) {
+            alert('Error: ' + resp.error);
+        } else {
+            alert(resp.message);
+            limpiarFormulario();
+            cargarInscripciones();
+        }
+    })
+    .catch(e => alert('Error en la petición: ' + e.message));
+}
+
+function putInscripcion() {
+    const data = {
+        id: Number(idInput.value),
+        fechaInscripcion: fechaInput.value,
+        estudianteId: Number(estudianteInput.value),
+        claseId: Number(claseInput.value)
+    };
+
+    fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (resp.error) {
+            alert('Error: ' + resp.error);
+        } else {
+            alert(resp.message);
+            limpiarFormulario();
+            cargarInscripciones();
+        }
+    })
+    .catch(e => alert('Error en la petición: ' + e.message));
+}
+
+function deleteInscripcion(id) {
+    fetch(url, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: Number(id) })
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (resp.error) {
+            alert('Error: ' + resp.error);
+        } else {
+            alert(resp.message);
+            cargarInscripciones();
+        }
+    })
+    .catch(e => alert('Error en la petición: ' + e.message));
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
