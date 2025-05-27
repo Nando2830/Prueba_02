@@ -1,10 +1,138 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
     <head>
-        <title>Start Page</title>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Gestión de Usuarios</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
     </head>
-    <body>
-        <h1>Hello World!</h1>
+    <body class="bg-light">
+
+        <div class="container py-5">
+            <h2 class="mb-4 text-center">Gestión de Usuarios</h2>
+
+            <form id="usuarioForm" class="card p-4 mb-4 shadow-sm bg-white">
+                <input type="hidden" id="id" />
+                <div class="mb-3">
+                    <label for="username" class="form-label">Usuario</label>
+                    <input type="text" class="form-control" id="username" required />
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Contraseña</label>
+                    <input type="password" class="form-control" id="password" required />
+                </div>
+                <div class="mb-3">
+                    <label for="correo" class="form-label">Correo</label>
+                    <input type="email" class="form-control" id="correo" />
+                </div>
+                <div class="mb-3">
+                    <label for="rolId" class="form-label">Rol ID</label>
+                    <input type="number" class="form-control" id="rolId" min="0" />
+                </div>
+                <button type="submit" class="btn btn-primary w-100" id="submitBtn">Guardar</button>
+            </form>
+
+            <table class="table table-bordered table-hover bg-white shadow-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Usuario</th>
+                        <th>Correo</th>
+                        <th>Rol ID</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="usuariosTableBody"></tbody>
+            </table>
+        </div>
+
+        <script>
+            const apiUrl = 'usuarios'; // Ajusta el contexto si es necesario
+
+            document.addEventListener("DOMContentLoaded", () => {
+                getUsuarios();
+
+                document.getElementById("usuarioForm").addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const id = document.getElementById("id").value;
+                    if (id) {
+                        await putUsuario();
+                    } else {
+                        await postUsuario();
+                    }
+                    e.target.reset();
+                    getUsuarios();
+                });
+            });
+
+            async function getUsuarios() {
+                const res = await fetch(apiUrl);
+                const data = await res.json();
+                const tbody = document.getElementById("usuariosTableBody");
+                tbody.innerHTML = "";
+                data.forEach(u => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+          <td>${u.id}</td>
+          <td>${u.username}</td>
+          <td>${u.correo}</td>
+          <td>${u.rolId}</td>
+          <td>
+            <button class="btn btn-warning btn-sm me-1" onclick='editar(${JSON.stringify(u)})'>Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteUsuario(${u.id})">Eliminar</button>
+          </td>
+        `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            async function postUsuario() {
+                const body = getFormData();
+                await fetch(apiUrl, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json;charset=UTF-8"},
+                    body: JSON.stringify(body)
+                });
+            }
+
+            async function putUsuario() {
+                const body = getFormData();
+                body.id = parseInt(document.getElementById("id").value);
+                await fetch(apiUrl, {
+                    method: "PUT",
+                    headers: {"Content-Type": "application/json;charset=UTF-8"},
+                    body: JSON.stringify(body)
+                });
+            }
+
+            async function deleteUsuario(id) {
+                if (!confirm("¿Estás seguro de eliminar este usuario?"))
+                    return;
+                await fetch(apiUrl, {
+                    method: "DELETE",
+                    headers: {"Content-Type": "application/json;charset=UTF-8"},
+                    body: JSON.stringify({id})
+                });
+                getUsuarios();
+            }
+
+            function editar(usuario) {
+                document.getElementById("id").value = usuario.id;
+                document.getElementById("username").value = usuario.username;
+                document.getElementById("password").value = usuario.password;
+                document.getElementById("correo").value = usuario.correo;
+                document.getElementById("rolId").value = usuario.rolId;
+            }
+
+            function getFormData() {
+                return {
+                    username: document.getElementById("username").value,
+                    password: document.getElementById("password").value,
+                    correo: document.getElementById("correo").value,
+                    rolId: parseInt(document.getElementById("rolId").value) || 0
+                };
+            }
+
+        </script>
     </body>
 </html>

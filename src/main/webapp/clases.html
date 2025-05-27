@@ -54,7 +54,7 @@
             });
 
             function obtenerClases() {
-                fetch("ClasesServlet")
+                fetch("clases")
                         .then(res => res.json())
                         .then(json => {
                             const tbody = document.getElementById("tabla-clases");
@@ -78,7 +78,7 @@
 
             function crearClase() {
                 const data = recogerDatosFormulario();
-                fetch("ClasesServlet", {
+                fetch("clases", {
                     method: "POST",
                     headers: {"Content-Type": "application/json;charset=UTF-8"},
                     body: JSON.stringify(data)
@@ -92,7 +92,7 @@
             function actualizarClase(id) {
                 const data = recogerDatosFormulario();
                 data.id = parseInt(id);
-                fetch("ClasesServlet", {
+                fetch("clases", {
                     method: "PUT",
                     headers: {"Content-Type": "application/json;charset=UTF-8"},
                     body: JSON.stringify(data)
@@ -106,7 +106,7 @@
             function eliminar(id) {
                 if (!confirm("¿Estás seguro de eliminar esta clase?"))
                     return;
-                fetch("ClasesServlet", {
+                fetch("clases", {
                     method: "DELETE",
                     headers: {"Content-Type": "application/json;charset=UTF-8"},
                     body: JSON.stringify({id})
