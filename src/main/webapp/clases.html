@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Gestión de Clases</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body class="container py-4">
+        <h1>Gestión de Clases</h1>
+
+        <form id="form-clase" class="mb-4">
+            <input type="hidden" id="id">
+            <div class="mb-3">
+                <label for="horario" class="form-label">Horario</label>
+                <input type="text" class="form-control" id="horario" required>
+            </div>
+            <div class="mb-3">
+                <label for="aula" class="form-label">Aula</label>
+                <input type="text" class="form-control" id="aula" required>
+            </div>
+            <div class="mb-3">
+                <label for="cursoId" class="form-label">Curso ID</label>
+                <input type="number" class="form-control" id="cursoId" required>
+            </div>
+            <div class="mb-3">
+                <label for="materiaId" class="form-label">Materia ID</label>
+                <input type="number" class="form-control" id="materiaId" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+        </form>
+
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ID</th><th>Horario</th><th>Aula</th><th>Curso ID</th><th>Materia ID</th><th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-clases"></tbody>
+        </table>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                obtenerClases();
+
+                document.getElementById("form-clase").addEventListener("submit", e => {
+                    e.preventDefault();
+                    const id = document.getElementById("id").value;
+                    if (id) {
+                        actualizarClase(id);
+                    } else {
+                        crearClase();
+                    }
+                });
+            });
+
+            function obtenerClases() {
+                fetch("ClasesServlet")
+                        .then(res => res.json())
+                        .then(json => {
+                            const tbody = document.getElementById("tabla-clases");
+                            tbody.innerHTML = "";
+                            json.data.forEach(c => {
+                                tbody.innerHTML += `
+                <tr>
+                  <td>${c.id}</td>
+                  <td>${c.horario}</td>
+                  <td>${c.aula}</td>
+                  <td>${c.cursoId}</td>
+                  <td>${c.materiaId}</td>
+                  <td>
+                    <button class="btn btn-warning btn-sm" onclick='editar(${JSON.stringify(c)})'>Editar</button>
+                    <button class="btn btn-danger btn-sm" onclick='eliminar(${c.id})'>Eliminar</button>
+                  </td>
+                </tr>`;
+                            });
+                        });
+            }
+
+            function crearClase() {
+                const data = recogerDatosFormulario();
+                fetch("ClasesServlet", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json;charset=UTF-8"},
+                    body: JSON.stringify(data)
+                })
+                        .then(() => {
+                            limpiarFormulario();
+                            obtenerClases();
+                        });
+            }
+
+            function actualizarClase(id) {
+                const data = recogerDatosFormulario();
+                data.id = parseInt(id);
+                fetch("ClasesServlet", {
+                    method: "PUT",
+                    headers: {"Content-Type": "application/json;charset=UTF-8"},
+                    body: JSON.stringify(data)
+                })
+                        .then(() => {
+                            limpiarFormulario();
+                            obtenerClases();
+                        });
+            }
+
+            function eliminar(id) {
+                if (!confirm("¿Estás seguro de eliminar esta clase?"))
+                    return;
+                fetch("ClasesServlet", {
+                    method: "DELETE",
+                    headers: {"Content-Type": "application/json;charset=UTF-8"},
+                    body: JSON.stringify({id})
+                })
+                        .then(() => obtenerClases());
+            }
+
+            function editar(clase) {
+                document.getElementById("id").value = clase.id;
+                document.getElementById("horario").value = clase.horario;
+                document.getElementById("aula").value = clase.aula;
+                document.getElementById("cursoId").value = clase.cursoId;
+                document.getElementById("materiaId").value = clase.materiaId;
+            }
+
+            function recogerDatosFormulario() {
+                return {
+                    horario: document.getElementById("horario").value,
+                    aula: document.getElementById("aula").value,
+                    cursoId: parseInt(document.getElementById("cursoId").value),
+                    materiaId: parseInt(document.getElementById("materiaId").value)
+                };
+            }
+
+            function limpiarFormulario() {
+                document.getElementById("form-clase").reset();
+                document.getElementById("id").value = "";
+            }
+
+        </script>
+    </body>
+</html>

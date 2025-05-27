@@ -1,87 +1,96 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package servlets;
 
+import dao.AsistenciaJpaController;
+import dto.Asistencia;
+import dto.Inscripciones;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import javax.json.*;
+import javax.persistence.Persistence;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.*;
 
-/**
- *
- * @author FERNANDO
- */
-@WebServlet(name = "AsistenciaServlet", urlPatterns = {"/asistencia"})
+@WebServlet("/asistencia")
 public class AsistenciaServlet extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        response.setContentType("text/html;charset=UTF-8");
-        try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
-            out.println("<!DOCTYPE html>");
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Servlet AsistenciaServlet</title>");            
-            out.println("</head>");
-            out.println("<body>");
-            out.println("<h1>Servlet AsistenciaServlet at " + request.getContextPath() + "</h1>");
-            out.println("</body>");
-            out.println("</html>");
+    private AsistenciaJpaController controller;
+
+    @Override
+    public void init() throws ServletException {
+        controller = new AsistenciaJpaController(Persistence.createEntityManagerFactory("com.mycompany_Prueba_02_war_1.0-SNAPSHOTPU")); // Ajusta el nombre
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.setContentType("application/json;charset=UTF-8");
+        JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
+
+        for (Asistencia a : controller.findAsistenciaEntities()) {
+            arrayBuilder.add(Json.createObjectBuilder()
+                .add("id", a.getId())
+                .add("fecha", a.getFecha() != null ? new SimpleDateFormat("yyyy-MM-dd").format(a.getFecha()) : "")
+                .add("presente", a.getPresente() != null ? a.getPresente() : false)
+                .add("inscripcionId", a.getInscripcionId() != null ? a.getInscripcionId().getId() : 0)
+            );
+        }
+
+        JsonArray jsonArray = arrayBuilder.build();
+        resp.getWriter().write(jsonArray.toString());
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        JsonObject json = Json.createReader(req.getInputStream()).readObject();
+
+        try {
+            Asistencia asistencia = new Asistencia();
+            asistencia.setFecha(new SimpleDateFormat("yyyy-MM-dd").parse(json.getString("fecha")));
+            asistencia.setPresente(json.getBoolean("presente", false));
+            asistencia.setInscripcionId(new Inscripciones(json.getInt("inscripcionId")));
+
+            controller.create(asistencia);
+            resp.setStatus(HttpServletResponse.SC_CREATED);
+        } catch (Exception e) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            e.printStackTrace();
         }
     }
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        JsonObject json = Json.createReader(req.getInputStream()).readObject();
+
+        try {
+            Asistencia asistencia = controller.findAsistencia(json.getInt("id"));
+            if (asistencia != null) {
+                asistencia.setFecha(new SimpleDateFormat("yyyy-MM-dd").parse(json.getString("fecha")));
+                asistencia.setPresente(json.getBoolean("presente", false));
+                asistencia.setInscripcionId(new Inscripciones(json.getInt("inscripcionId")));
+
+                controller.edit(asistencia);
+                resp.setStatus(HttpServletResponse.SC_OK);
+            } else {
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            }
+        } catch (Exception e) {
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            e.printStackTrace();
+        }
     }
 
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        JsonObject json = Json.createReader(req.getInputStream()).readObject();
+
+        try {
+            controller.destroy(json.getInt("id"));
+            resp.setStatus(HttpServletResponse.SC_OK);
+        } catch (Exception e) {
+            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            e.printStackTrace();
+        }
     }
-
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
-    @Override
-    public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
-
 }

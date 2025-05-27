@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Cursos</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body class="container py-4">
+        <h1 class="mb-4">Gestión de Cursos</h1>
+
+        <form id="cursoForm" class="mb-4">
+            <input type="hidden" id="cursoId">
+            <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre del Curso</label>
+                <input type="text" class="form-control" id="nombre" required>
+            </div>
+            <div class="mb-3">
+                <label for="anioAcademico" class="form-label">Año Académico</label>
+                <input type="date" class="form-control" id="anioAcademico" required>
+            </div>
+            <div class="mb-3">
+                <label for="profesorId" class="form-label">ID del Profesor</label>
+                <input type="number" class="form-control" id="profesorId">
+            </div>
+            <button type="submit" class="btn btn-primary" id="guardarBtn">Guardar</button>
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">Cancelar</button>
+        </form>
+
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Año Académico</th>
+                    <th>Profesor ID</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaCursos"></tbody>
+        </table>
+
+        <script>
+            const apiUrl = "cursos";
+
+            document.addEventListener("DOMContentLoaded", () => {
+                cargarCursos();
+                document.getElementById("cursoForm").addEventListener("submit", guardarCurso);
+            });
+
+            function cargarCursos() {
+                fetch(apiUrl)
+                        .then(res => res.json())
+                        .then(data => {
+                            const tbody = document.getElementById("tablaCursos");
+                            tbody.innerHTML = "";
+                            data.forEach(curso => {
+                                const tr = document.createElement("tr");
+                                tr.innerHTML = `
+                        <td>${curso.id}</td>
+                        <td>${curso.nombre}</td>
+                        <td>${curso.anioAcademico}</td>
+                        <td>${curso.profesorId ?? ''}</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" onclick="editarCurso(${curso.id}, '${curso.nombre}', '${curso.anioAcademico}', ${curso.profesorId ?? 'null'})">Editar</button>
+                            <button class="btn btn-danger btn-sm" onclick="eliminarCurso(${curso.id})">Eliminar</button>
+                        </td>
+                    `;
+                                tbody.appendChild(tr);
+                            });
+                        });
+            }
+
+            function guardarCurso(e) {
+                e.preventDefault();
+                const id = document.getElementById("cursoId").value;
+                const curso = {
+                    nombre: document.getElementById("nombre").value,
+                    anioAcademico: document.getElementById("anioAcademico").value,
+                    profesorId: document.getElementById("profesorId").value || null
+                };
+
+                if (id) {
+                    curso.id = parseInt(id);
+                    fetch(apiUrl, {
+                        method: "PUT",
+                        headers: {"Content-Type": "application/json;charset=UTF-8"},
+                        body: JSON.stringify(curso)
+                    }).then(() => {
+                        resetForm();
+                        cargarCursos();
+                    });
+                } else {
+                    fetch(apiUrl, {
+                        method: "POST",
+                        headers: {"Content-Type": "application/json;charset=UTF-8"},
+                        body: JSON.stringify(curso)
+                    }).then(() => {
+                        resetForm();
+                        cargarCursos();
+                    });
+                }
+            }
+
+            function editarCurso(id, nombre, anio, profesorId) {
+                document.getElementById("cursoId").value = id;
+                document.getElementById("nombre").value = nombre;
+                document.getElementById("anioAcademico").value = anio;
+                document.getElementById("profesorId").value = profesorId || "";
+            }
+
+            function eliminarCurso(id) {
+                fetch(apiUrl, {
+                    method: "DELETE",
+                    headers: {"Content-Type": "application/json;charset=UTF-8"},
+                    body: JSON.stringify({id: id})
+                }).then(() => {
+                    cargarCursos();
+                });
+            }
+
+            function resetForm() {
+                document.getElementById("cursoForm").reset();
+                document.getElementById("cursoId").value = "";
+            }
+
+        </script>
+    </body>
+</html>
